@@ -1,14 +1,13 @@
 blueprint:
-  name: Szablon wyłączenia światła
+  name: Szablon wyłączenia światła – multiświatło i bez czujnika
   description: |
-    Wyłącza światło po określonym czasie braku ruchu.
-    Obsługuje jeden lub dwa czujniki ruchu. Sprawdza, czy światło było włączone.
-    Może opcjonalnie wysłać powiadomienie na jedno lub dwa urządzenia notify.
-    Zabezpieczenie przed błędami: brakujące inputy nie powodują awarii.
+    Wyłącza jedno lub więcej świateł po określonym czasie od ostatniego ruchu – lub po czasie bez względu na ruch.
+    Obsługuje 1–3 źródła światła i 0–2 czujniki ruchu. Powiadomienia opcjonalne.
   domain: automation
   input:
     motion_sensor_1:
-      name: Czujnik ruchu 1 (obowiązkowy)
+      name: Czujnik ruchu 1 (opcjonalnie)
+      default: []
       selector:
         entity:
           domain: binary_sensor
@@ -22,8 +21,22 @@ blueprint:
           domain: binary_sensor
           device_class: motion
 
-    light_entity:
-      name: Światło do wyłączenia
+    light_1:
+      name: Światło 1
+      selector:
+        entity:
+          domain: light
+
+    light_2:
+      name: Światło 2 (opcjonalnie)
+      default: []
+      selector:
+        entity:
+          domain: light
+
+    light_3:
+      name: Światło 3 (opcjonalnie)
+      default: []
       selector:
         entity:
           domain: light
@@ -64,22 +77,19 @@ trigger:
     to: "off"
     for:
       minutes: !input delay_minutes
-
   - platform: state
     entity_id: !input motion_sensor_2
     to: "off"
     for:
       minutes: !input delay_minutes
+  - platform: time_pattern
+    minutes: "/1"  # sprawdza co minutę, jeśli brak czujników
 
 condition:
-  - condition: state
-    entity_id: !input light_entity
-    state: "on"
-
   - condition: or
     conditions:
       - condition: template
-        value_template: "{{ not (motion_sensor_2 | default('')) }}"
+        value_template: "{{ not (motion_sensor_1 or motion_sensor_2) }}"
       - condition: and
         conditions:
           - condition: state
@@ -89,17 +99,30 @@ condition:
             entity_id: !input motion_sensor_2
             state: "off"
 
+  - condition: or
+    conditions:
+      - condition: state
+        entity_id: !input light_1
+        state: "on"
+      - condition: template
+        value_template: "{{ (light_2 != [] and is_state(light_2, 'on')) or (light_3 != [] and is_state(light_3, 'on')) }}"
+
 action:
   - variables:
       notify1: !input notify_target
       notify2: !input notify_target_2
       notify_enabled: !input send_notification
       delay: !input delay_minutes
-      light: !input light_entity
+      light_1: !input light_1
+      light_2: !input light_2
+      light_3: !input light_3
 
   - service: light.turn_off
     target:
-      entity_id: !input light_entity
+      entity_id:
+        - !input light_1
+        - !input light_2
+        - !input light_3
 
   - choose:
       - conditions:
@@ -109,8 +132,7 @@ action:
           - service: "{{ notify1 }}"
             data:
               message: >-
-                Światło {{ state_attr(light, 'friendly_name') }} zostało wyłączone
-                po {{ delay }} minutach braku ruchu.
+                Światła zostały wyłączone po {{ delay }} minutach braku ruchu lub po czasie.
 
           - choose:
               - conditions:
@@ -120,7 +142,7 @@ action:
                   - service: "{{ notify2 }}"
                     data:
                       message: >-
-                        (Kopia) Światło {{ state_attr(light, 'friendly_name') }} zostało wyłączone.
+                        (Kopia) Światła zostały wyłączone automatycznie.
 
       - conditions:
           - condition: template
@@ -130,7 +152,6 @@ action:
             data:
               title: "Blueprint INFO"
               message: >-
-                Światło zostało wyłączone po okresie braku ruchu.
-                Powiadomienia aktywne: {{ 'TAK' if notify_enabled else 'NIE' }}
+                Wyłączono światła. Powiadomienia: {{ 'TAK' if notify_enabled else 'NIE' }}
 
 mode: restart
