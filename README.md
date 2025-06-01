@@ -1,64 +1,53 @@
-# 🌓 Szablon automatyzacji: Wyłączenie światła po braku ruchu lub czasie
+# 🌓 Proste wyłączenie oświetlenia po bezruchu (1–3 źródła, 1–2 czujniki)
 
-Ten blueprint dla Home Assistant automatycznie **wyłącza jedno lub więcej świateł** po określonym czasie braku ruchu – lub po czasie, nawet jeśli czujników ruchu nie ma. Zapewnia **elastyczne sterowanie** światłem w pomieszczeniach z różną liczbą źródeł światła i czujników.
+Blueprint do Home Assistant, który automatycznie wyłącza jedno, dwa lub trzy światła po upływie określonego czasu bezruchu, wykrytego przez maksymalnie dwa czujniki ruchu.
 
-## ✅ Funkcje
+## 🔧 Funkcje
 
-- Obsługa do **3 źródeł światła**
-- Obsługa **0–2 czujników ruchu**
-- **Warunek włączenia światła** – światła nie wyłączają się, jeśli są już zgaszone
-- **Opcjonalne powiadomienia** na jedno lub dwa urządzenia `notify.*`
-- **Zabezpieczenia przed błędami**: brakujące czujniki nie powodują awarii
+- Obsługa **1–3 świateł** (`light`)
+- Obsługa **1–2 czujników ruchu** (`binary_sensor`)
+- Konfigurowalny **czas bezruchu (w minutach)**
+- Wyłącza tylko te światła, które były włączone
+- Loguje wyłączenia do **Logbooka**
+- W pełni konfigurowalny przez UI Home Assistant
 
-## ⚙️ Wymagane dane wejściowe
+## 📥 Import do Home Assistant
 
-| Nazwa | Opis |
-|------|------|
-| `light_1` | Główne światło do wyłączenia |
-| `delay_minutes` | Czas w minutach do wyłączenia światła |
+Kliknij link poniżej lub skopiuj adres do formularza „Import blueprint”:
 
-## 🧩 Opcjonalne dane wejściowe
-
-| Nazwa | Opis |
-|------|------|
-| `motion_sensor_1`, `motion_sensor_2` | Czujniki ruchu |
-| `light_2`, `light_3` | Dodatkowe światła do wyłączenia |
-| `send_notification` | Czy wysyłać powiadomienia |
-| `notify_target`, `notify_target_2` | Nazwy usług `notify.*` |
-
-## 🔍 Działanie
-
-### Scenariusz 1: Pomieszczenie z 1 czujnikiem ruchu
-
-- Światło wyłącza się po `X minutach`, jeśli czujnik nie wykrywał ruchu przez ten czas.
-
-### Scenariusz 2: Pomieszczenie z 2 czujnikami
-
-- Światło wyłącza się po `X minutach`, **jeśli oba czujniki były wyłączone przez ten czas**.
-
-### Scenariusz 3: Brak czujników ruchu
-
-- Światło wyłącza się **tylko na podstawie czasu** – niezależnie od obecności.
-
-## 📦 Instalacja
-
-1. Przejdź do `Automations & Scenes > Blueprints > Import Blueprint`
-2. Wklej link do `blueprint.yaml` z tego repozytorium
-3. Skonfiguruj instancję automatyzacji
-
-## 📝 Przykładowe użycie
-
-- Pokój z 1 czujnikiem: zgaś światło po 10 minutach bezruchu
-- Korytarz z 2 czujnikami: wyłącz po 5 minutach, gdy żaden nie wykrywa ruchu
-- WC bez czujnika: wyłącz po 8 minutach (np. po wejściu zapalono ręcznie)
+[📎 Importuj blueprint](https://my.home-assistant.io/redirect/blueprint_import/?url=https://raw.githubusercontent.com/sza86/BluePrints/main/szablon_wylaczenia_swiatla.yaml)
 
 ---
 
-## 👤 Autor
+## ⚙️ Wejścia
 
-Blueprint opracowany przez **SZA**  
-Dostosowany do platformy **Home Assistant**
+| Nazwa                | Opis                                                   | Wymagane |
+|---------------------|--------------------------------------------------------|----------|
+| `motion_sensor_1`   | Główny czujnik ruchu                                    | ✅       |
+| `motion_sensor_2`   | Drugi czujnik ruchu (opcjonalny)                        | ❌       |
+| `light_target_1`    | Główne światło                                          | ✅       |
+| `light_target_2`    | Dodatkowe światło #1 (opcjonalne)                       | ❌       |
+| `light_target_3`    | Dodatkowe światło #2 (opcjonalne)                       | ❌       |
+| `delay_time`        | Czas bezruchu w minutach (np. 1–60)                     | ✅       |
 
 ---
 
-**Licencja:** MIT
+## 🧠 Zasada działania
+
+1. Czujnik lub czujniki przestają wykrywać ruch.
+2. Po zadanym czasie (np. 3 minuty) uruchamiane są warunki.
+3. Jeśli nadal jest brak ruchu – każde włączone światło zostaje wyłączone.
+4. Informacja o wyłączeniu trafia do `Logbook`.
+
+---
+
+## 📝 Autor
+
+- 👤 Autor: [szpila86](https://github.com/sza86)
+- 📄 Licencja: [MIT](LICENSE)
+
+---
+
+## 📂 Plik YAML
+
+Blueprint znajduje się w pliku [`szablon_wylaczenia_swiatla.yaml`](./szablon_wylaczenia_swiatla.yaml)
