@@ -6,7 +6,6 @@ Ten blueprint dla Home Assistant automatycznie **wyłącza jedno lub więcej św
 
 - Obsługa do **3 źródeł światła**
 - Obsługa **0–2 czujników ruchu**
-- **Tryb timera** (działanie bez czujnika – wyłączenie po czasie)
 - **Warunek włączenia światła** – światła nie wyłączają się, jeśli są już zgaszone
 - **Opcjonalne powiadomienia** na jedno lub dwa urządzenia `notify.*`
 - **Zabezpieczenia przed błędami**: brakujące czujniki nie powodują awarii
