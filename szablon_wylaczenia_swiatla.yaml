@@ -1,12 +1,14 @@
 blueprint:
   name: Proste wyłączenie oświetlenia po bezruchu (1–3 źródła, 1–2 czujniki)
   description: >
-    Wyłącza jedno, dwa lub trzy wskazane oświetlenia po czasie bezruchu wykrytym przez jeden lub dwa czujniki ruchu.
+    Wyłącza jedno, dwa lub trzy wskazane oświetlenia po czasie bezruchu
+    wykrytym przez jeden lub dwa czujniki ruchu.
   domain: automation
   author: szpila86
   source_url: https://github.com/sza86/BluePrints/edit/main/szablon_wylaczenia_swiatla.yaml
 
   input:
+    # Wymagany czujnik ruchu (np. w salonie)
     motion_sensor_1:
       name: Czujnik ruchu #1 (obowiązkowy)
       selector:
@@ -14,20 +16,23 @@ blueprint:
           domain: binary_sensor
           device_class: motion
 
+    # Opcjonalny drugi czujnik ruchu (np. w innym rogu pomieszczenia)
     motion_sensor_2:
       name: Czujnik ruchu #2 (opcjonalny)
-      default: []
+      default: []  # Domyślnie brak drugiego czujnika
       selector:
         entity:
           domain: binary_sensor
           device_class: motion
 
+    # Główne źródło światła – wymagane (np. główna lampa)
     light_target_1:
       name: Główne oświetlenie (obowiązkowe)
       selector:
         entity:
           domain: light
 
+    # Dodatkowe światło 1 – opcjonalne (np. lampa stojąca)
     light_target_2:
       name: Dodatkowe oświetlenie #1 (opcjonalne)
       default: []
@@ -36,6 +41,7 @@ blueprint:
           domain: light
           multiple: false
 
+    # Dodatkowe światło 2 – opcjonalne (np. LED pod meblami)
     light_target_3:
       name: Dodatkowe oświetlenie #2 (opcjonalne)
       default: []
@@ -44,6 +50,7 @@ blueprint:
           domain: light
           multiple: false
 
+    # Czas bezruchu, po którym światła zostaną wyłączone
     delay_time:
       name: Czas bezruchu (sekundy)
       default: 60
@@ -54,21 +61,27 @@ blueprint:
           unit_of_measurement: seconds
           mode: slider
 
+# Tryb automatyzacji – restartuje timer przy każdym ruchu
 mode: restart
+# Nie pokazuj błędów jeśli automatyzacja się nakłada
 max_exceeded: silent
 
+# Wyzwalacze (triggers) – brak ruchu przez określony czas
 trigger:
+  # Gdy czujnik ruchu 1 nie wykrywa ruchu przez zadany czas
   - platform: state
     entity_id: !input motion_sensor_1
     to: 'off'
     for:
       seconds: !input delay_time
+  # Gdy czujnik ruchu 2 (jeśli jest) również nie wykrywa ruchu
   - platform: state
     entity_id: !input motion_sensor_2
     to: 'off'
     for:
       seconds: !input delay_time
 
+# Zmienne – uproszczony dostęp do encji
 variables:
   motion_sensor_1: !input motion_sensor_1
   motion_sensor_2: !input motion_sensor_2
@@ -76,28 +89,50 @@ variables:
   light2: !input light_target_2
   light3: !input light_target_3
 
+# Warunki – sprawdzenie, czy naprawdę brak ruchu na obu czujnikach
 condition:
   - condition: template
     value_template: >
       {{ is_state(motion_sensor_1, 'off') and
          (motion_sensor_2 == [] or is_state(motion_sensor_2, 'off')) }}
 
+# Akcje – wyłączenie świateł oraz zapis do logbooka
 action:
+  # Jeśli światło 1 jest włączone – wyłącz je i zapisz do logbooka
   - choose:
       - conditions: "{{ is_state(light1, 'on') }}"
         sequence:
+          - service: logbook.log
+            data:
+              name: Automatyzacja oświetlenia
+              message: "Wyłączono {{ light1 }} po wykryciu braku ruchu."
+              entity_id: "{{ light1 }}"
           - service: homeassistant.turn_off
             target:
               entity_id: "{{ light1 }}"
+
+  # Jeśli światło 2 istnieje i jest włączone – wyłącz i zaloguj
   - choose:
       - conditions: "{{ light2 != [] and is_state(light2, 'on') }}"
         sequence:
+          - service: logbook.log
+            data:
+              name: Automatyzacja oświetlenia
+              message: "Wyłączono {{ light2 }} po wykryciu braku ruchu."
+              entity_id: "{{ light2 }}"
           - service: homeassistant.turn_off
             target:
               entity_id: "{{ light2 }}"
+
+  # Jeśli światło 3 istnieje i jest włączone – wyłącz i zaloguj
   - choose:
       - conditions: "{{ light3 != [] and is_state(light3, 'on') }}"
         sequence:
+          - service: logbook.log
+            data:
+              name: Automatyzacja oświetlenia
+              message: "Wyłączono {{ light3 }} po wykryciu braku ruchu."
+              entity_id: "{{ light3 }}"
           - service: homeassistant.turn_off
             target:
               entity_id: "{{ light3 }}"
