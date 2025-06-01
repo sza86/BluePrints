@@ -1,14 +1,14 @@
 blueprint:
-  name: Proste wyłączenie oświetlenia po bezruchu (1–3 źródła, 1–2 czujniki)
+  name: Proste wyłączenie oświetlenia po bezruchu (1–3 źródła, 1–2 czujniki, czas w minutach)
   description: >
     Wyłącza jedno, dwa lub trzy wskazane oświetlenia po czasie bezruchu
-    wykrytym przez jeden lub dwa czujniki ruchu.
+    wykrytym przez jeden lub dwa czujniki ruchu. Czas podawany w minutach.
   domain: automation
   author: szpila86
   source_url: https://github.com/sza86/BluePrints/edit/main/szablon_wylaczenia_swiatla.yaml
 
   input:
-    # Wymagany czujnik ruchu (np. w salonie)
+    # Obowiązkowy czujnik ruchu
     motion_sensor_1:
       name: Czujnik ruchu #1 (obowiązkowy)
       selector:
@@ -16,23 +16,23 @@ blueprint:
           domain: binary_sensor
           device_class: motion
 
-    # Opcjonalny drugi czujnik ruchu (np. w innym rogu pomieszczenia)
+    # Opcjonalny drugi czujnik ruchu
     motion_sensor_2:
       name: Czujnik ruchu #2 (opcjonalny)
-      default: []  # Domyślnie brak drugiego czujnika
+      default: []
       selector:
         entity:
           domain: binary_sensor
           device_class: motion
 
-    # Główne źródło światła – wymagane (np. główna lampa)
+    # Główne światło (wymagane)
     light_target_1:
       name: Główne oświetlenie (obowiązkowe)
       selector:
         entity:
           domain: light
 
-    # Dodatkowe światło 1 – opcjonalne (np. lampa stojąca)
+    # Dodatkowe światło 1 (opcjonalne)
     light_target_2:
       name: Dodatkowe oświetlenie #1 (opcjonalne)
       default: []
@@ -41,7 +41,7 @@ blueprint:
           domain: light
           multiple: false
 
-    # Dodatkowe światło 2 – opcjonalne (np. LED pod meblami)
+    # Dodatkowe światło 2 (opcjonalne)
     light_target_3:
       name: Dodatkowe oświetlenie #2 (opcjonalne)
       default: []
@@ -50,38 +50,36 @@ blueprint:
           domain: light
           multiple: false
 
-    # Czas bezruchu, po którym światła zostaną wyłączone
+    # Czas bezruchu w minutach
     delay_time:
-      name: Czas bezruchu (sekundy)
-      default: 60
+      name: Czas bezruchu (minuty)
+      default: 1
       selector:
         number:
-          min: 5
-          max: 3600
-          unit_of_measurement: seconds
+          min: 1
+          max: 60
+          unit_of_measurement: minutes
           mode: slider
 
-# Tryb automatyzacji – restartuje timer przy każdym ruchu
+# Tryb restart – każde nowe wykrycie ruchu restartuje timer
 mode: restart
-# Nie pokazuj błędów jeśli automatyzacja się nakłada
+# Milczące przekroczenie limitów wykonania
 max_exceeded: silent
 
-# Wyzwalacze (triggers) – brak ruchu przez określony czas
+# Wyzwalacze – oba czujniki (jeśli użyte) muszą być nieaktywne przez podany czas
 trigger:
-  # Gdy czujnik ruchu 1 nie wykrywa ruchu przez zadany czas
   - platform: state
     entity_id: !input motion_sensor_1
     to: 'off'
     for:
-      seconds: !input delay_time
-  # Gdy czujnik ruchu 2 (jeśli jest) również nie wykrywa ruchu
+      minutes: !input delay_time  # używamy minut bez konwersji
   - platform: state
     entity_id: !input motion_sensor_2
     to: 'off'
     for:
-      seconds: !input delay_time
+      minutes: !input delay_time
 
-# Zmienne – uproszczony dostęp do encji
+# Zmienne pomocnicze do użycia w warunkach i akcjach
 variables:
   motion_sensor_1: !input motion_sensor_1
   motion_sensor_2: !input motion_sensor_2
@@ -89,16 +87,16 @@ variables:
   light2: !input light_target_2
   light3: !input light_target_3
 
-# Warunki – sprawdzenie, czy naprawdę brak ruchu na obu czujnikach
+# Warunek: brak ruchu na czujniku 1 i (jeśli obecny) czujniku 2
 condition:
   - condition: template
     value_template: >
       {{ is_state(motion_sensor_1, 'off') and
          (motion_sensor_2 == [] or is_state(motion_sensor_2, 'off')) }}
 
-# Akcje – wyłączenie świateł oraz zapis do logbooka
+# Akcje: wyłącz każde aktywne światło + zapisz do logbooka
 action:
-  # Jeśli światło 1 jest włączone – wyłącz je i zapisz do logbooka
+  # Wyłączenie światła 1 jeśli jest włączone
   - choose:
       - conditions: "{{ is_state(light1, 'on') }}"
         sequence:
@@ -111,7 +109,7 @@ action:
             target:
               entity_id: "{{ light1 }}"
 
-  # Jeśli światło 2 istnieje i jest włączone – wyłącz i zaloguj
+  # Wyłączenie światła 2 jeśli zdefiniowane i włączone
   - choose:
       - conditions: "{{ light2 != [] and is_state(light2, 'on') }}"
         sequence:
@@ -124,7 +122,7 @@ action:
             target:
               entity_id: "{{ light2 }}"
 
-  # Jeśli światło 3 istnieje i jest włączone – wyłącz i zaloguj
+  # Wyłączenie światła 3 jeśli zdefiniowane i włączone
   - choose:
       - conditions: "{{ light3 != [] and is_state(light3, 'on') }}"
         sequence:
